@@ -1,7 +1,7 @@
 var GRAPHER = (function($, _) {
     "use strict";
     var grapher = {};
-    var drawTimerId;
+    var canvasTimerId;
     var controlPoints = [];
     var selectedPoint = -1;
     var graphPadding = 20;
@@ -19,6 +19,9 @@ var GRAPHER = (function($, _) {
     var numApproxSteps = 1;
     var func;
     var funcCache = [];
+
+    var particleTimerId;
+    var particleSize = 32;
 
     function dot4(a, b) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
@@ -62,6 +65,35 @@ var GRAPHER = (function($, _) {
         ctx.stroke();
     }
 
+    function evalAtPoint(curPt, t) {
+        var numPts = controlPoints.length;
+        var p0 = controlPoints[Math.max(0, curPt-1)];
+        var p1 = controlPoints[curPt];
+        var p2 = controlPoints[Math.min(numPts-1, curPt+1)];
+        var p3 = controlPoints[Math.min(numPts-1, curPt+2)];
+
+        var localT = (t - p1.x) / (p2.x - p1.x);
+        var y = CatmullRom(localT, p0.y, p1.y, p2.y, p3.y);
+        return y;
+    }
+
+    function splineAtTime(t) {
+        var numPts = controlPoints.length;
+        if (numPts == 0)
+            return 0;
+
+        var curPt = 0;
+        if (t < controlPoints[0].x) {
+            return controlPoints[0].y;
+        } else if (t > _.last(controlPoints).x) {
+            return _.last(controlPoints).y;
+        } else {
+            while (t > controlPoints[curPt+1].x && curPt < numPts)
+                curPt++;
+            return evalAtPoint(curPt, t);
+        }
+    }
+
     function evalSpline(steps) {
         var res = [];
         var numPts = controlPoints.length;
@@ -80,19 +112,35 @@ var GRAPHER = (function($, _) {
                 while (t > controlPoints[curPt+1].x && curPt < numPts)
                     curPt++;
 
-                var p0 = controlPoints[Math.max(0, curPt-1)];
-                var p1 = controlPoints[curPt];
-                var p2 = controlPoints[Math.min(numPts-1, curPt+1)];
-                var p3 = controlPoints[Math.min(numPts-1, curPt+2)];
-
-                var localT = (t - p1.x) / (p2.x - p1.x);
-                var y = CatmullRom(localT, p0.y, p1.y, p2.y, p3.y);
-
+                var y = evalAtPoint(curPt, t);
                 res.push(y);
             }
         }
-
         return res;
+    }
+
+    function drawParticle() {
+        var canvas = $('#particle-canvas').get(0);
+        var ctx = canvas.getContext('2d');
+        var w = canvas.width;
+        var h = canvas.height;
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, w, h);
+
+        var r = particleSize/2;
+        for (var i = -r; i < r; ++i) {
+            for (var j = -r; j < r; ++j) {
+                var dx = Math.abs(i/r);
+                var dy = Math.abs(j/r);
+                var d = Math.sqrt(dx*dx+dy*dy);
+                var c = d <= 1 ? 255 * splineAtTime(xMin + d*(xMax - xMin)) : 0;
+                c = Math.max(0, Math.min(255, c));
+                ctx.fillStyle = "rgba(" + c.toFixed(0) + "," + c.toFixed(0) + "," + c.toFixed(0) + "," + c.toFixed(0) + ")";
+                ctx.fillRect(j+particleSize/2, i+particleSize/2, 1, 1);
+            }
+        }
+
     }
 
     function drawCanvas() {
@@ -351,6 +399,10 @@ var GRAPHER = (function($, _) {
         controlPoints = JSON.parse(j);
     };
 
+    grapher.setParticleSize = function(s) {
+        particleSize = s;
+    };
+
     grapher.init = function() {
         var canvas = $('#graph-canvas');
         var cont = $("#container");
@@ -363,7 +415,8 @@ var GRAPHER = (function($, _) {
         canvas.mousemove(mouseMove);
         canvas.mouseleave(mouseLeave);
         $(document).keypress(keyDown);
-        drawTimerId = setInterval(drawCanvas, 100);
+        canvasTimerId = setInterval(drawCanvas, 100);
+        particleTimerId = setInterval(drawParticle, 100);
     };
 
     return grapher;

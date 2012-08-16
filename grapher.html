@@ -6,6 +6,8 @@
     <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
     <script type="text/javascript" src="js/underscore-min.js"></script>
     <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/base64.js"></script>
+    <script type="text/javascript" src="js/canvas2image.js"></script>
     <script type="text/javascript" src="grapher.js"></script>
     <script type="text/javascript">
         $(document).ready(function () {
@@ -23,8 +25,7 @@
                 var dims = _.map(ctrls, function(x) {
                     return parseFloat($(x).attr("value"));
                 });
-                var dimsValid = _.map(dims, function(x) { return !isNaN(x); });
-                if (_.all(dimsValid)) {
+                if (_.all(dims, function(x) { return !isNaN(x); } )) {
                     GRAPHER.setDimensions.apply(GRAPHER, dims); // haha, this is actually pretty stupid :)
                 }
             }
@@ -36,14 +37,18 @@
                 GRAPHER.setFunc(f.attr("value"));
             });
 
-            GRAPHER.init();
-            $("#graphXMin").attr("value", curDims.x0);
-            $("#graphXMax").attr("value", curDims.x1);
-            $("#graphYMin").attr("value", curDims.y0);
-            $("#graphYMax").attr("value", curDims.y1);
+            var setValue = function(sel, value) {
+                $(sel).attr("value", value);
+            };
 
-            $("#graphName").attr("value", "test");
-            $("#graphSteps").attr("value", 1024);
+            GRAPHER.init();
+            setValue("#graphXMin", curDims.x0);
+            setValue("#graphXMax", curDims.x1);
+            setValue("#graphYMin", curDims.y0);
+            setValue("#graphYMax", curDims.y1);
+
+            setValue("#graphName", "test");
+            setValue("#graphSteps", 1024);
 
             $("#btnCodeGen").click(function() {
                 var steps = parseInt($("#graphSteps").attr("value"), 10);
@@ -55,8 +60,25 @@
                 return false;
             });
 
+            var ps = $("#particleSize");
+            ps.bind('keyup', function() {
+                var s = parseFloat(ps.attr("value"));
+                if (!isNaN(s)) {
+                    GRAPHER.setParticleSize(s);
+                    var particleCanvas = $('#particle-canvas').get(0);
+                    particleCanvas.width = s;
+                    particleCanvas.height = s;
+                }
+            });
+
             $("#btnImportJson").click(function() {
                 GRAPHER.JsonImport($("#graphJson").attr("value"));
+                return false;
+            });
+
+            $("#btnSaveParticle").click(function() {
+                var img = Canvas2Image.saveAsPNG($("#particle-canvas").get(0), true);
+                $("#particle-div").append(img);
                 return false;
             });
 
@@ -130,7 +152,23 @@
 
     </div>
 
-</div>
+    <div class="row-fluid">
+        <div class="span3">
+            <form class="form-horizontal" id="particle-params">
+                <div class="control-group">
+                    <label class="control-label" style="width:120px" for="particleSize">Particle Size</label>
+                    <div class="controls" style="margin-left: 150px">
+                        <input type="text" class="input-small" id="particleSize">
+                    </div>
+                </div>
+                <button id="btnSaveParticle">Save particle</button>
+            </form>
+        </div>
+        <div class="span4" id="particle-div">
+            <canvas id="particle-canvas" width=128 height=128>
+            </canvas>
+        </div>
+    </div>
 </body>
 
 </html>
