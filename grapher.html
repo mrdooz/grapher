@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
+    <script type="text/javascript" src="js/underscore-min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="grapher.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            var graph = $('#graph-canvas');
+            var g = graph.get(0);
+            g.width = graph.parent().width();
+            g.height = 300;
+
+            var curDims = GRAPHER.getDimensions();
+
+            var ctrls = ["#graphXMin", "#graphXMax", "#graphYMin", "#graphYMax"];
+
+            var newDimensions = function() {
+                var dims = _.map(ctrls, function(x) {
+                    return parseFloat($(x).attr("value"));
+                });
+                var dimsValid = _.map(dims, function(x) { return !isNaN(x); });
+                if (_.all(dimsValid)) {
+                    GRAPHER.setDimensions.apply(GRAPHER, dims); // haha, this is actually pretty stupid :)
+                }
+            }
+
+            _.each(ctrls, function(x) { $(x).bind('keyup', newDimensions); });
+
+            var f = $("#func");
+            f.bind('keyup', function() {
+                GRAPHER.setFunc(f.attr("value"));
+            });
+
+            GRAPHER.init();
+            $("#graphXMin").attr("value", curDims.x0);
+            $("#graphXMax").attr("value", curDims.x1);
+            $("#graphYMin").attr("value", curDims.y0);
+            $("#graphYMax").attr("value", curDims.y1);
+
+            $("#graphName").attr("value", "test");
+            $("#graphSteps").attr("value", 1024);
+
+            $("#btnCodeGen").click(function() {
+                var steps = parseInt($("#graphSteps").attr("value"), 10);
+                if (isNaN(steps)) {
+                    alert("Invalid # steps");
+                } else {
+                    GRAPHER.generateCode(steps);
+                }
+                return false;
+            });
+
+            $("#btnImportJson").click(function() {
+                GRAPHER.JsonImport($("#graphJson").attr("value"));
+                return false;
+            });
+
+        });
+    </script>
+</head>
+
+<body>
+<div class="container-fluid">
+
+    <div class="row-fluid">
+        <div class="span3">
+            <form class="form-horizontal" id="graph-params">
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphName">Name</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphName">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphYMin">Y min</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphYMin">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphYMax">Y max</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphYMax">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphXMin">X min</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphXMin">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphXMax">X max</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphXMax">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label" style="width:50px" for="graphSteps">Steps</label>
+                    <div class="controls" style="margin-left: 70px">
+                        <input type="text" class="input-small" id="graphSteps">
+                    </div>
+                </div>
+                <button id="btnCodeGen">Gief codez!</button>
+            </form>
+        </div>
+        <div class="span9" id="container">
+            <canvas id="graph-canvas"/>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <label>func</label>
+        <input type="text" class="input-xxlarge" id="func"/>
+    </div>
+    <div class="row-fluid">
+        <div class="span6">
+            <label>codez</label>
+            <textarea class="input-xxlarge" id="graphCode" rows="3"></textarea>
+        </div>
+        <div class="span6">
+            <label>JSON</label>
+            <textarea class="input-xxlarge" id="graphJson" rows="3"></textarea>
+            <button id="btnImportJson">Import JSON</button>
+        </div>
+
+    </div>
+
+</div>
+</body>
+
+</html>
